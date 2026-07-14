@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://F6RH1T.github.io/FERCONVERT_v4_2/sitemap.xml
