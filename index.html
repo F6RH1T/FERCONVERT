@@ -2981,7 +2981,37 @@ const classes={
 };
 async function classify(){const f=$('fcClassFile').files[0];if(!f)return toast('Belge seçin','err');setLog('fcClassLog','Belge metni okunuyor…');try{let text='';if(f.type==='application/pdf')text=(await pdfText(f,(i,n)=>setLog('fcClassLog',`Sayfa ${i}/${n} okunuyor…`))).map(x=>x.text).join('\n');else if(f.type.startsWith('text/'))text=await f.text();else{const bmp=await createImageBitmap(f),c=document.createElement('canvas');c.width=bmp.width;c.height=bmp.height;c.getContext('2d').drawImage(bmp,0,0);text=await recognizeCanvas(c,'tur+eng',p=>setLog('fcClassLog',`Görsel OCR %${p}`))}const scores=Object.entries(classes).map(([name,patterns])=>({name,score:patterns.reduce((s,r)=>s+(r.test(text)?1:0),0),max:patterns.length})).sort((a,b)=>b.score-a.score);const box=$('fcClassResults');box.innerHTML='';scores.forEach(s=>{const pct=Math.round(s.score/s.max*100),d=document.createElement('div');d.className='fc-smart-result';d.innerHTML=`<strong>${escapeHtml(s.name)} — %${pct}</strong><div class="fc-class-score"><span style="width:${pct}%"></span></div><p>${s.score}/${s.max} belirti eşleşti.</p>`;box.append(d)});const best=scores[0];setLog('fcClassLog',best.score?`En olası tür: ${best.name}`:'Belirgin bir belge türü bulunamadı.');addHistory('Belge Tanı','Belge sınıflandırıldı',`${fileMeta(f)} • ${best.name} %${Math.round(best.score/best.max*100)}`,JSON.stringify(scores,null,2));toast('Belge analizi tamamlandı')}catch(e){console.error(e);setLog('fcClassLog','Hata: '+e.message);toast('Analiz başarısız','err')}}
 function wire(){
-  const nav=document.querySelector('.layers.fc-side-nav')||document.querySelector('.layers');if(nav&&!nav.querySelector('[data-tab="smart"]')){const b=document.createElement('button');b.className='layer-btn';b.dataset.tab='smart';b.innerHTML='<span class="num">07</span> Akıllı Araçlar';nav.append(b);b.addEventListener('click',()=>{document.querySelectorAll('.layer-btn').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-selected','false')});b.classList.add('active');b.setAttribute('aria-selected','true');['tab-img','tab-data','tab-b64','tab-text','tab-color','tab-pdf'].forEach(id=>$(id)?.classList.add('hidden'));$('tab-smart').classList.remove('hidden');document.querySelector('.fc-sidebar')?.classList.remove('mobile-open')})}
+  const nav=document.querySelector('.layers.fc-side-nav')||document.querySelector('.layers');
+  if(nav&&!nav.querySelector('[data-tab="smart"]')){
+    const b=document.createElement('button');
+    b.className='layer-btn';
+    b.dataset.tab='smart';
+    b.setAttribute('role','tab');
+    b.setAttribute('aria-selected','false');
+    b.innerHTML='<span class="num">07</span> Akıllı Araçlar';
+    nav.append(b);
+
+    const normalButtons=[...nav.querySelectorAll('.layer-btn:not([data-tab="smart"])')];
+    const closeSmart=()=>{
+      b.classList.remove('active');
+      b.setAttribute('aria-selected','false');
+      $('tab-smart')?.classList.add('hidden');
+    };
+
+    normalButtons.forEach(button=>button.addEventListener('click',closeSmart));
+
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('.layer-btn').forEach(x=>{
+        x.classList.remove('active');
+        x.setAttribute('aria-selected','false');
+      });
+      b.classList.add('active');
+      b.setAttribute('aria-selected','true');
+      ['tab-img','tab-data','tab-b64','tab-text','tab-color','tab-pdf'].forEach(id=>$(id)?.classList.add('hidden'));
+      $('tab-smart')?.classList.remove('hidden');
+      document.querySelector('.fc-sidebar')?.classList.remove('mobile-open');
+    });
+  }
   const panel=document.querySelector('.panel');if(panel&&$('tab-smart')?.parentElement!==panel)panel.appendChild($('tab-smart'));
   document.querySelectorAll('#fcSmartNav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#fcSmartNav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.fc-smart-panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelector(`[data-smart-panel="${b.dataset.smart}"]`)?.classList.add('active')});
   $('fcOcrRun').onclick=runOcr;$('fcOcrCopy').onclick=()=>navigator.clipboard.writeText($('fcOcrOutput').value);$('fcOcrTxt').onclick=()=>downloadText($('fcOcrOutput').value,'ferconvert-ocr.txt');$('fcOcrClear').onclick=()=>{$('fcOcrOutput').value='';$('fcOcrProgress').style.width='0';setLog('fcOcrLog','Temizlendi.')};
